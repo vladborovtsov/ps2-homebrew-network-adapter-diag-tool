@@ -61,11 +61,32 @@ static int WaitValidNetState(int (*checkingFunction)(void))
 		SetAlarm(1000 * 16, &EthStatusCheckCb, &ThreadID);
 		SleepThread();
 
-		if(retry_cycles >= 30)	//30s = 10*1000ms
+		if(retry_cycles >= 10)	//10s = 10*1000ms
 			return -1;
 	}
 
 	return 0;
+}
+
+static int ethGetDHCPStatus(void)
+{
+        t_ip_info ip_info;
+        int result;
+
+        if ((result = ps2ip_getconfig("sm0", &ip_info)) >= 0)
+        {       //Check for a successful state if DHCP is enabled.
+                if (ip_info.dhcp_enabled)
+                        result = (ip_info.dhcp_status == DHCP_STATE_BOUND || (ip_info.dhcp_status == DHCP_STATE_OFF));
+                else
+                        result = -1;
+        }
+
+        return result;
+}
+
+static int ethWaitValidDHCPState(void)
+{
+        return WaitValidNetState(&ethGetDHCPStatus);
 }
 
 static void my_sleep(int seconds) {
@@ -271,9 +292,6 @@ int main(int argc, char *argv[])
 		goto end;
 	}
 	
-
-	my_sleep(10); 
-
     struct ip4_addr IP, NM, GW, DNS;
 	// For dhcp we need zeroes. 
 	ip4_addr_set_zero(&IP);
@@ -288,17 +306,25 @@ int main(int argc, char *argv[])
 	scr_printf("Waiting for connection...\n");
 	int attmpt = 0; 
 
-	while (i < 10) {
+	while (attmpt < 10) {
 	 	if(ethWaitValidNetIFLinkState() != 0) {
-			scr_printf("Error: failed to get valid link status. Waiting... #%d\n", i);
-			i++;
+			scr_printf("Error: failed to get valid link status. Waiting... #%d\n", attmpt);
+			attmpt++;
 		}
+		break;
 	}
 
-	if (i >=10) {
+	if (attmpt >=10) {
 		scr_printf("Attempts exceeded. Exiting.\n");
 		goto end;
 	}
+
+	scr_printf("Waiting for DHCP lease...");
+    if (ethWaitValidDHCPState() != 0)
+    {
+        scr_printf("DHCP failed\n.");
+        goto end;
+    }
 	
 
 	scr_printf("Initialized:\n");
@@ -306,6 +332,7 @@ int main(int argc, char *argv[])
 	ethPrintIPConfig();
 
 	//At this point, network support has been initialized and the PS2 can be pinged.
+	scr_printf("Init complete. At this point PS2 can be pinged on the IP shown above.");
 	SleepThread();
 
   end:
