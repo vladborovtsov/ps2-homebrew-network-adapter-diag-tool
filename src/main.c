@@ -322,7 +322,8 @@ int main(int argc, char *argv[])
 	scr_printf("Waiting for DHCP lease...");
     if (ethWaitValidDHCPState() != 0)
     {
-        scr_printf("DHCP failed\n.");
+        scr_printf("DHCP failed. Exiting.\n");
+		my_sleep(10);
         goto end;
     }
 	
