@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "socket.h": "c",
+        "ps2ip.h": "c"
+    }
+}
