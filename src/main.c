@@ -240,6 +240,20 @@ static void ethPrintLinkStatus(void)
 	scr_printf("Flow Control\n");
 }
 
+int print_eth_status() {
+    int result;
+    u32 status;
+    unsigned int len = sizeof(status);
+
+    result = NetManIoctl(NETMAN_NETIF_IOCTL_ETH_GET_STATUS, NULL, 0, &status, len);
+
+    if (result == 0) {
+        scr_printf("NETMAN_NETIF_IOCTL_ETH_GET_STATUS Value: %u\n", status);
+    } else {
+        scr_printf("Failed to retrieve Ethernet status.\n");
+    }
+}
+
 int main(int argc, char *argv[])
 {
 	//Reboot IOP
@@ -282,6 +296,7 @@ int main(int argc, char *argv[])
            macAddress[3], macAddress[4], macAddress[5]);
 
     
+	print_eth_status(); 
 
 	// Ethernet link mode
 	scr_printf("\nWill try to set ethernet link mode: AUTO\n");	
@@ -291,6 +306,8 @@ int main(int argc, char *argv[])
 		scr_printf("Error: failed to set link mode.\n");
 		goto end;
 	}
+
+	print_eth_status(); 
 	
     struct ip4_addr IP, NM, GW, DNS;
 	// For dhcp we need zeroes. 
@@ -306,6 +323,8 @@ int main(int argc, char *argv[])
 	scr_printf("Waiting for connection...\n");
 	int attmpt = 0; 
 
+	print_eth_status(); 
+
 	while (attmpt < 10) {
 	 	if(ethWaitValidNetIFLinkState() != 0) {
 			scr_printf("Error: failed to get valid link status. Waiting... #%d\n", attmpt);
@@ -313,6 +332,8 @@ int main(int argc, char *argv[])
 		}
 		break;
 	}
+
+	print_eth_status(); 
 
 	if (attmpt >=10) {
 		scr_printf("Attempts exceeded. Exiting.\n");
@@ -326,6 +347,8 @@ int main(int argc, char *argv[])
 		my_sleep(10);
         goto end;
     }
+
+	print_eth_status(); 
 	
 
 	scr_printf("Initialized:\n");
